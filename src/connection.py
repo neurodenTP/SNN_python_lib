@@ -23,11 +23,12 @@ class Connection:
         return np.random.normal(0, 1, (self.target_layer.neurons_num, 
                                        self.source_layer.neurons_num))
 
-    def propagate(self):
-        source_output = np.array(self.source_layer.get_outputs())
+    def propagate(self, source_output):
         return np.dot(self.weights, source_output)
 
     def update_weights(self, dt):
+        if self.learning is None:
+            return
         self.weights += self.learning.rule(self.weights, 
                                            self.source_layer.get_outputs,
                                            self.target_layer.get_outputs)

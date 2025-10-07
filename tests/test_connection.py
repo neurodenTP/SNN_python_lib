@@ -55,7 +55,7 @@ class TestConnection(unittest.TestCase):
         # Установим выводы источника в известные значения
         for i, neuron in enumerate(self.source_layer.neurons):
             neuron.Iout = float(i+1)  # 1.0, 2.0, 3.0
-        output = conn.propagate()
+        output = conn.propagate(conn.source_layer.get_outputs())
         expected = np.dot(conn.weights, np.array([1.0, 2.0, 3.0]))
         np.testing.assert_allclose(output, expected)
 

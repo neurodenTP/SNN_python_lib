@@ -1,5 +1,7 @@
 import numpy as np
 
+#TODO Переписать правила
+
 class STDP:
     def __init__(self, params):
         self.A_plus = params.get('A_plus', 0.01)
