@@ -1,8 +1,8 @@
 import numpy as np
 
 class Connection:
-    def __init__(self, name, source_layer, target_layer,
-                 learning_class, learning_params, weight_matrix=None):
+    def __init__(self, name, source_layer, target_layer, weight_matrix=None,
+                 learning_class=None, learning_params=None):
         self.name = name
         self.source_layer = source_layer
         self.target_layer = target_layer

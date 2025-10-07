@@ -20,8 +20,8 @@ class Layer:
         if len(Iin) != self.neurons_num:
             raise ValueError(f"Длина входного сигнала Iin ({len(Iin)}) не соответствует количеству нейронов ({self.neurons_num})")
 
-        for neuron in self.neurons:
-            neuron.step(dt, Iin)
+        for i, neuron in enumerate(self.neurons):
+            neuron.step(dt, Iin[i])
 
     def get_outputs(self):
         # Получить текущие выходные токи всех нейронов слоя

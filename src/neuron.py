@@ -19,7 +19,7 @@ class Neuron:
     def get_U(self):
         return self.U
     
-    def get__is_spike(self):
+    def get_is_spike(self):
         return self.is_spike
 
 
