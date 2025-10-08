@@ -1,26 +1,17 @@
-# import numpy as np
+import numpy as np
 
 class Neuron:
     def __init__(self, params):
         self.params = params
-        self.U = params.get('Ustart', 0.0)  # Мембранный потенциал
-        self.Iout = params.get('Ioutstart', 0.0)  # Выходной ток
 
-    def reset(self):
-        self.U = self.params.get('Ustart', 0.0)
-        self.Iout = self.params.get('Ioutstart', 0.0)
-
-    def step(self, dt, Iin):
+    def generate(self, N):
         raise NotImplementedError
 
-    def get_Iout(self):
-        return self.Iout
+    def reset(self, var):
+        raise NotImplementedError
 
-    def get_U(self):
-        return self.U
-    
-    def get_is_spike(self):
-        return self.is_spike
+    def step(self, var, dt, Iin):
+        raise NotImplementedError
 
 
 class LIFNeuron(Neuron):
@@ -31,114 +22,119 @@ class LIFNeuron(Neuron):
         Аргументы:
         params (dict): словарь параметров нейрона, включает:
             'Ustart' (float): начальное значение мембранного потенциала (по умолчанию 0.0)
-            'Ioutstart' (float): начальный выходной ток (по умолчанию 0.0)
             'Utay' (float): постоянная времени мембранного потенциала (декадация), в тех же единицах времени (по умолчанию 10.0)
             'Uth' (float): порог спайка мембранного потенциала (по умолчанию 1.0)
             'Urest' (float): потенциал покоя мембраны после спайка (по умолчанию 0.0)
+            
             'Itay' (float): постоянная времени выхода тока (декадация), в тех же единицах времени (по умолчанию 10.0)
-            'refractiontime' (float): время рефрактерного периода, в тех же единицах времени (по умолчанию 5.0)
-            'Iout_max' (float): максимальный выходной ток при спайке (по умолчанию 1.0)
-
-        Атрибуты экземпляра:
-        self.U (float): текущий мембранный потенциал
-        self.Iout (float): текущий выходной ток
-        self.is_spike (bool): флаг спайка в текущий шаг
-        self.tr (int): счётчик оставшегося рефрактерного времени
+            'Imax' (float): максимальный выходной ток при спайке (по умолчанию 1.0)
+            'Istart' (float): начальный выходной ток (по умолчанию 0.0)
         """
         super().__init__(params)
-        self.itay = params.get('Itay', 10.0)
+        
         self.utay = params.get('Utay', 10.0)
         self.uth = params.get('Uth', 1.0)
         self.urest = params.get('Urest', 0.0)
-        self.iout_max = params.get('Iout_max', 1.0)
-        self.refraction_time = params.get('refractiontime', 5.0)
-        self.reset()
-
-    def reset(self):
-        self.U = self.params.get('Ustart', 0.0)
-        self.Iout = self.params.get('Ioutstart', 0.0)
-        self.is_spike = False
-        self.tr = 0
-
-    def step(self, dt, Iin):
-        self.Iout *= (1 - dt / self.itay)
-        self.is_spike = False
+        self.ustart = params.get('Ustart', self.urest)
         
-        if self.tr > 0:
-            self.tr -= dt
-            return
+        self.itay = params.get('Itay', 10.0)
+        self.imax = params.get('Iout_max', 1.0)
+        self.istart = params.get('Istart', 0.0)
 
-        self.U *= (1 - dt / self.utay)
-        self.U += Iin
 
-        if self.U >= self.uth:
-            self.Iout = self.iout_max
-            self.U = self.urest
-            self.tr = self.refraction_time
-            self.is_spike = True
+    def generate(self, N):
+        var = {'U': np.full(N, self.ustart),
+               'I': np.full(N, self.istart),
+               'S': np.full(N, 0),
+               'N': N}
+        return var
+
+    def reset(self, var):
+        N = var['N']
+        var['U'] = np.full(N, self.ustart)
+        var['I'] = np.full(N, self.istart)
+        var['S'] = np.full(N, 0)
+
+    def step(self, var, dt, Iin):
+        N = var['N']
+        
+        var['U'] *= (1 - dt / self.utay)
+        var['U'] += Iin
+        
+        ind_spike = np.where(var['U'] >= self.uth)  
+        ind_no_spike = list(set(range(N) - set(ind_spike)))
+
+        var['I'][ind_spike] = np.fill(len(ind_spike), self.imax)
+        var['U'][ind_spike] = np.fill(len(ind_spike), self.urest)
+        var['S'][ind_spike] = np.fill(len(ind_spike), 1.)
+        
+        var['I'][ind_no_spike] *= (1 - dt / self.itay)
+        var['S'][ind_no_spike] = np.fill(len(ind_no_spike), 0.)
+
 
             
-class LIFAdaptiveNeuron(Neuron):
+class AdaptiveLIFNeuron(Neuron):
     def __init__(self, params):
         """
         Инициализация LIF Adaptive нейрона.
 
         Аргументы:
         params (dict): словарь параметров нейрона, включает:
-            'Ustart' (float): начальное значение мембранного потенциала (по умолчанию 0.0)
-            'Vstart' (float): потенциала восстановления (по умолчанию 0.0)
-            'Ioutstart' (float): начальный выходной ток (по умолчанию 0.0)
-            
             'Utay' (float): постоянная времени мембранного потенциала (декадация), в тех же единицах времени (по умолчанию 10.0)
             'Uth' (float): порог спайка мембранного потенциала (по умолчанию 1.0)
+            'Ustart' (float): начальное значение мембранного потенциала (по умолчанию 0.0)
+            
             'Vtay' (float): постоянная времени потенциала восстановления, в тех же единицах времени (по умолчанию 10.0)
             'Vstep' (float): шаг изменения потенциала восстановления при активации
+            'Vstart' (float): потенциала восстановления (по умолчанию 0.0)
             
             'Itay' (float): постоянная времени выхода тока (декадация), в тех же единицах времени (по умолчанию 10.0)
-            'refractiontime' (float): время рефрактерного периода, в тех же единицах времени (по умолчанию 5.0)
-            'Iout_max' (float): максимальный выходной ток при спайке (по умолчанию 1.0)
-
-        Атрибуты экземпляра:
-        self.U (float): текущий мембранный потенциал
-        self.Iout (float): текущий выходной ток
-        self.is_spike (bool): флаг спайка в текущий шаг
-        self.tr (int): счётчик оставшегося рефрактерного времени
+            'Imax' (float): максимальный выходной ток при спайке (по умолчанию 1.0)
+            'Istart' (float): начальный выходной ток (по умолчанию 0.0)
         """
         super().__init__(params)
+        
         self.utay = params.get('Utay', 10.0)
         self.uth = params.get('Uth', 1.0)
+        self.ustart = params.get('Ustart', self.urest)
         
         self.vtay = params.get('Vtay', 1000.0)
         self.vstep = params.get('Vstep', 0.1)
+        self.vstart = params.get('Vstart', 0.0)
         
         self.itay = params.get('Itay', 10.0)
-        self.iout_max = params.get('Iout_max', 1.0)
-        self.refraction_time = params.get('refractiontime', 5.0)
-        self.reset()
+        self.imax = params.get('Imax', 1.0)
+        self.istart = params.get('Istart', 0.0)
 
-    def reset(self):
-        self.U = self.params.get('Ustart', 0.0)
-        self.V = self.params.get('Vstart', 0.0)
-        self.Iout = self.params.get('Ioutstart', 0.0)
-        self.is_spike = False
-        self.tr = 0
+    def generate(self, N):
+        var = {'U': np.full(N, self.ustart),
+               'V': np.full(N, self.vstart),
+               'I': np.full(N, self.istart),
+               'S': np.full(N, 0),
+               'N': N}
+        return var
 
-    def step(self, dt, Iin):
-        self.Iout *= (1 - dt / self.itay)
-        self.V *= (1 - dt / self.vtay)
-        self.is_spike = False
+    def reset(self, var):
+        N = var['N']
+        var['U'] = np.full(N, self.vstart)
+        var['V'] = np.full(N, self.ustart)
+        var['I'] = np.full(N, self.istart)
+        var['S'] = np.full(N, 0)
+
+    def step(self, var, dt, Iin):
+        N = var['N']
         
-        if self.tr > 0:
-            self.tr -= dt
-            return
-
-        self.U *= (1 - dt / self.utay)
-        self.U += Iin
+        var['U'] *= (1 - dt / self.utay)
+        var['U'] += Iin
         
+        ind_spike = np.where(var['U'] >= self.uth)
+        ind_no_spike = list(set(range(N) - set(ind_spike)))
 
-        if self.U >= self.uth:
-            self.V -= self.vstep
-            self.Iout = self.iout_max
-            self.U = self.V
-            self.tr = self.refraction_time
-            self.is_spike = True
+        var['I'][ind_spike] = np.fill(len(ind_spike), self.imax)
+        var['V'][ind_spike] -= self.vstep
+        var['U'][ind_spike] = np.fill(len(ind_spike), var['V'][ind_spike])
+        var['S'][ind_spike] = np.fill(len(ind_spike), 1.)
+        
+        var['I'][ind_no_spike] *= (1 - dt / self.itay)
+        var['V'][ind_no_spike] *= (1 - dt / self.vtay)
+        var['S'][ind_no_spike] = np.fill(len(ind_no_spike), 0.)
