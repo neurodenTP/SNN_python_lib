@@ -29,9 +29,10 @@ class Connection:
     def update_weights(self, dt):
         if self.learning is None:
             return
-        self.weights += self.learning.rule(self.weights, 
-                                           self.source_layer.get_outputs,
-                                           self.target_layer.get_outputs)
+        self.weights = self.learning.rule(self.weights, 
+                                          self.source_layer.get_spike,
+                                          self.target_layer.get_spike,
+                                          dt)
 
     def reset_weights(self, new_weights=None):
         if new_weights is None:
