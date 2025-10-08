@@ -44,9 +44,28 @@ class MonitorLayer(ABC):
     def clear(self):
         self.data = {layer.name: [] for layer in self.layers}
 
-    @abstractmethod
-    def plot(self, layer_name, dt):
-        pass
+    
+    def _plot_line(self, layer_name, dt, xlabel, ylabel, title):
+        data = self.get_data(layer_name)
+        times = (self.counter - len(data) + np.arange(len(data))) * dt
+
+        for i in range(len(data[0])):
+            plt.plot(times, data[:, i], label=str(i))
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.title(title)
+        plt.legend()
+            
+    def _plot_imshow(self, layer_name, dt, xlabel, ylabel, title):
+        data = self.get_data(layer_name)
+        times = (self.counter - len(data) + np.arange(len(data))) * dt
+        plt.imshow(data.T, extent=[times[0], times[-1], 0, data.shape[1]], 
+                   aspect='auto', origin='lower', interpolation='none')
+        plt.colorbar()
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.title(title)
+        
 
 
 class PotentialMonitor(MonitorLayer):
@@ -56,16 +75,13 @@ class PotentialMonitor(MonitorLayer):
     def get_data(self, layer_name):
         return np.array(super().get_data(layer_name))
 
-    def plot(self, layer_name, dt):
-        data = self.get_data(layer_name)
-        times = (self.counter - len(data) + np.arange(len(data))) * dt
-        plt.imshow(data.T, extent=[times[0], times[-1], 0, data.shape[1]], 
-                   aspect='auto', origin='lower', interpolation='none')
-        plt.colorbar()
-        plt.xlabel('Время (мс)')
-        plt.ylabel('Нейроны')
-        plt.title(f"Потенциалы слоя {layer_name}")
-        plt.show()
+    def plot_line(self, layer_name, dt):
+        self._plot_line(layer_name, dt, 'Время (мс)', 'Нейрон', 
+                        f"Потенциалы слоя {layer_name}")
+        
+    def plot_imshow(self, layer_name, dt):
+        self._plot_imshow(layer_name, dt, 'Время (мс)', 'Нейрон', 
+                          f"Потенциалы слоя {layer_name}")
 
 class CurrentMonitor(MonitorLayer):
     def _get_layer_data(self, layer):
@@ -73,17 +89,25 @@ class CurrentMonitor(MonitorLayer):
 
     def get_data(self, layer_name):
         return np.array(super().get_data(layer_name))
+    
+    def plot_line(self, layer_name, dt):
+        self._plot_line(layer_name, dt, 'Время (мс)', 'Нейрон', 
+                        f"Токи слоя {layer_name}")
+        
+    def plot_imshow(self, layer_name, dt):
+        self._plot_imshow(layer_name, dt, 'Время (мс)', 'Нейрон', 
+                          f"Токи слоя {layer_name}")
 
-    def plot(self, layer_name, dt):
-        data = self.get_data(layer_name)
-        times = (self.counter - len(data) + np.arange(len(data))) * dt
-        plt.imshow(data.T, extent=[times[0], times[-1], 0, data.shape[1]], 
-                   aspect='auto', origin='lower', interpolation='none')
-        plt.colorbar()
-        plt.xlabel('Время (мс)')
-        plt.ylabel('Нейроны')
-        plt.title(f"Токи слоя {layer_name}")
-        plt.show()
+    # def plot(self, layer_name, dt):
+    #     data = self.get_data(layer_name)
+    #     times = (self.counter - len(data) + np.arange(len(data))) * dt
+    #     plt.imshow(data.T, extent=[times[0], times[-1], 0, data.shape[1]], 
+    #                aspect='auto', origin='lower', interpolation='none')
+    #     plt.colorbar()
+    #     plt.xlabel('Время (мс)')
+    #     plt.ylabel('Нейроны')
+    #     plt.title(f"Токи слоя {layer_name}")
+    #     plt.show()
 
 
 class SpikeMonitor(MonitorLayer):

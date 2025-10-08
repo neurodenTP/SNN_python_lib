@@ -11,6 +11,10 @@ class Network:
         if layer.name in self.layers:
             raise ValueError(f"Слой с именем {layer.name} уже существует")
         self.layers[layer.name] = layer
+        
+    def add_layers(self, layers):
+        for layer in layers:
+            self.add_layer(layer)
 
     def add_connection(self, connection):
         if connection.name in self.connections:
@@ -19,11 +23,19 @@ class Network:
             connection.source_layer.name not in self.layers):
             raise ValueError("Указанные слои должны существовать в сети")
         self.connections[connection.name] = connection
+        
+    def add_connections(self, connections):
+        for connection in connections:
+            self.add_connection(connection)
     
     def add_monitor(self, monitor):
         if monitor.name in self.monitors:
             raise ValueError(f"Монитор с именем {monitor.name} уже существует")
         self.monitors[monitor.name] = monitor
+        
+    def add_monitors(self, monitors):
+        for monitor in monitors:
+            self.add_monitor(monitor)   
         
     def remove_monitor(self, name):
         if name in self.monitors:
