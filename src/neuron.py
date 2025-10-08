@@ -45,31 +45,27 @@ class LIFNeuron(Neuron):
     def generate(self, N):
         var = {'U': np.full(N, self.ustart),
                'I': np.full(N, self.istart),
-               'S': np.full(N, 0),
-               'N': N}
+               'S': np.full(N, 0)}
         return var
 
     def reset(self, var):
-        N = var['N']
-        var['U'] = np.full(N, self.ustart)
-        var['I'] = np.full(N, self.istart)
-        var['S'] = np.full(N, 0)
+        var['U'].fill(self.ustart)
+        var['I'].fill(self.istart)
+        var['S'].fill(0.0)
 
     def step(self, var, dt, Iin):
-        N = var['N']
-        
         var['U'] *= (1 - dt / self.utay)
         var['U'] += Iin
         
-        ind_spike = np.where(var['U'] >= self.uth)  
-        ind_no_spike = list(set(range(N) - set(ind_spike)))
+        ind_spike = np.where(var['U'] >= self.uth)
+        ind_no_spike = np.where(var['U'] < self.uth)
 
-        var['I'][ind_spike] = np.fill(len(ind_spike), self.imax)
-        var['U'][ind_spike] = np.fill(len(ind_spike), self.urest)
-        var['S'][ind_spike] = np.fill(len(ind_spike), 1.)
+        var['I'][ind_spike] = self.imax
+        var['U'][ind_spike] = self.urest
+        var['S'][ind_spike] = 1.
         
         var['I'][ind_no_spike] *= (1 - dt / self.itay)
-        var['S'][ind_no_spike] = np.fill(len(ind_no_spike), 0.)
+        var['S'][ind_no_spike] = 0.
 
 
             
@@ -110,31 +106,27 @@ class AdaptiveLIFNeuron(Neuron):
         var = {'U': np.full(N, self.ustart),
                'V': np.full(N, self.vstart),
                'I': np.full(N, self.istart),
-               'S': np.full(N, 0),
-               'N': N}
+               'S': np.full(N, 0)}
         return var
 
     def reset(self, var):
-        N = var['N']
-        var['U'] = np.full(N, self.vstart)
-        var['V'] = np.full(N, self.ustart)
-        var['I'] = np.full(N, self.istart)
-        var['S'] = np.full(N, 0)
+        var['U'].fill(self.vstart)
+        var['V'].fill(self.ustart)
+        var['I'].fill(self.istart)
+        var['S'].fill(0)
 
     def step(self, var, dt, Iin):
-        N = var['N']
-        
         var['U'] *= (1 - dt / self.utay)
         var['U'] += Iin
         
         ind_spike = np.where(var['U'] >= self.uth)
-        ind_no_spike = list(set(range(N) - set(ind_spike)))
+        ind_no_spike = np.where(var['U'] < self.uth)
 
-        var['I'][ind_spike] = np.fill(len(ind_spike), self.imax)
+        var['I'][ind_spike] = self.imax
         var['V'][ind_spike] -= self.vstep
-        var['U'][ind_spike] = np.fill(len(ind_spike), var['V'][ind_spike])
-        var['S'][ind_spike] = np.fill(len(ind_spike), 1.)
+        var['U'][ind_spike] = 1.0 * var['V'][ind_spike]
+        var['S'][ind_spike] = 1.
         
         var['I'][ind_no_spike] *= (1 - dt / self.itay)
         var['V'][ind_no_spike] *= (1 - dt / self.vtay)
-        var['S'][ind_no_spike] = np.fill(len(ind_no_spike), 0.)
+        var['S'][ind_no_spike] = 0.

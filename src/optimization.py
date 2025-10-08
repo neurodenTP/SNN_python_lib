@@ -11,7 +11,6 @@ class STDP:
         self.y_plus = None
         self.y_minus = None
         
-
     def rule(self, weights, pre_spikes, post_spikes, dt):
         weights_delta = np.zeros_like(weights)
         pre_spikes = pre_outputs_func()
@@ -31,4 +30,4 @@ class STDP:
         np.clip(weights, 0, 1, out=weights)
         return weights
 
-class LTPf
+# class LTPf
