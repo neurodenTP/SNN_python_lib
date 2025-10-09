@@ -1,17 +1,38 @@
 import numpy as np
 
 class Neuron:
-    def __init__(self, params):
+    def __init__(self, name, N, params):
+        self.N = N
         self.params = params
+        
+        for key in ['Ustart', 'Istart']:
+            if key not in self.params:
+                raise ValueError(f"В словаре params нет {key}")
+            if not hasattr(self.params[key], '__len__'):
+                self.params[key] = np.full(N, self.params[key])
+            if len(self.params[key]) != N:
+                raise ValueError(f"Длина параметра {key} = {len(self.params[key])} не соответствует количеству нейронов ({N})")    
+        
+        self.ustart = params['Ustart']
+        self.istart = params['Istart']
+        
+        self.U = np.empty(N)
+        self.I = np.empty(N)
+        
+        self.reset()
 
-    def generate(self, N):
-        raise NotImplementedError
+    def reset(self):
+        self.U = self.ustart
+        self.I = self.istart
 
-    def reset(self, var):
-        raise NotImplementedError
-
-    def step(self, var, dt, Iin):
-        raise NotImplementedError
+    def step(self, dt, Iin):
+        pass
+        
+    def get_potential(self):
+        return self.U
+    
+    def get_current(self):
+        return self.I
 
 
 class LIFNeuron(Neuron):
@@ -130,3 +151,13 @@ class AdaptiveLIFNeuron(Neuron):
         var['I'][ind_no_spike] *= (1 - dt / self.itay)
         var['V'][ind_no_spike] *= (1 - dt / self.vtay)
         var['S'][ind_no_spike] = 0.
+
+
+if __name__ == '__main__':
+    N = 4
+    params = {'Ustart': np.zeros(N),
+              'Istart': 0.}
+    neuron = Neuron('kwa', N, params)
+    print(neuron.get_current())
+    print(neuron.get_potential())
+    
