@@ -92,7 +92,7 @@ class Network:
         for neuron_name, neuron in self.neurons.items():
             # Создаем копии внешних токов, чтобы их модифицировать дальше
             I_in[neuron_name] = np.array(I_external.get(neuron_name, np.zeros(neuron.N)))
-    
+        
         # Добавляем входы от соединений
         for synapse in self.synapses.values():
             # Получаем выходные токи исходного слоя

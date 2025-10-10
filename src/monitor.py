@@ -28,16 +28,16 @@ class Monitor():
     def get_data(self, obj_name) -> np.ndarray:
         if obj_name not in self.data:
             raise ValueError(f"Данные для {obj_name} не собраны")
-        return self.data[obj_name]
+        return np.array(self.data[obj_name])
     
     def collect(self):
         self.counter += 1
         if self.counter % self.save_step != 0:
             return
         for obj in self.objs:
-            datum = self._request_data_from_obj(obj)
-            print(datum)
+            datum = self._request_data_from_obj(obj).copy()
             points = self.data[obj.name]
+            print(points)
             points.append(datum)
             if self.max_points is not None and len(points) > self.max_points:
                 points.pop(0)
