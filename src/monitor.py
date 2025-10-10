@@ -1,50 +1,52 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from abc import ABC, abstractmethod
+from neuron import Neuron
+from synapse import Synapse
 
-class MonitorLayer(ABC):
-    def __init__(self, name, layers, save_step=1, max_points=None):
+
+class Monitor():
+    def __init__(self, name: str, objs, save_step: int = 1, max_points: int = None):
         """
         name: имя монитора
-        layers: Layer или список слоев для мониторинга
+        objs: объект или список объект для мониторинга (Neuron/Synapse)
         save_step: сохранять данные каждый n-й вызов collect
         max_points: максимальное количество последних точек для хранения (None - без ограничения)
         """
         self.name = name
-        if not isinstance(layers, list):
-            layers = [layers]
-        self.layers = layers
+        if not isinstance(objs, list):
+            objs = [objs]
+        self.objs = objs
         self.save_step = max(1, save_step)
         self.max_points = max_points
         self.counter = 0
 
-        self.data = {layer.name: [] for layer in self.layers}
-
-    @abstractmethod
-    def _get_layer_data(self, layer):
-        """Определяет что именно сохранять (потенциалы, токи, спайки)."""
+        self.data = {obj.name: [] for obj in self.objs}
+    
+    def _request_data_from_obj(self, obj) -> np.ndarray:
         pass
-
+    
+    def get_data(self, obj_name) -> np.ndarray:
+        if obj_name not in self.data:
+            raise ValueError(f"Данные для {obj_name} не собраны")
+        return self.data[obj_name]
+    
     def collect(self):
         self.counter += 1
         if self.counter % self.save_step != 0:
             return
-        for layer in self.layers:
-            datum = self._get_layer_data(layer)
-            points = self.data[layer.name]
+        for obj in self.objs:
+            datum = self._request_data_from_obj(obj)
+            print(datum)
+            points = self.data[obj.name]
             points.append(datum)
             if self.max_points is not None and len(points) > self.max_points:
                 points.pop(0)
-                
-    def get_data(self, layer_name):
-        if layer_name not in self.data:
-            raise ValueError(f"Данные для слоя {layer_name} не собраны")
-        return self.data[layer_name]
-
-    def clear(self):
-        self.data = {layer.name: [] for layer in self.layers}
-
     
+    def clear(self):
+        self.data = {obj.name: [] for obj in self.objs}
+
+
+class MonitorNeuron(Monitor):    
     def _plot_line(self, layer_name, dt, xlabel, ylabel, title):
         data = self.get_data(layer_name)
         times = (self.counter - len(data) + np.arange(len(data))) * dt
@@ -67,13 +69,9 @@ class MonitorLayer(ABC):
         plt.title(title)
         
 
-
-class PotentialMonitor(MonitorLayer):
-    def _get_layer_data(self, layer):
-        return layer.get_states()
-
-    def get_data(self, layer_name):
-        return np.array(super().get_data(layer_name))
+class MonitorPotential(MonitorNeuron):
+    def _request_data_from_obj(self, neuron: Neuron) -> np.ndarray:
+        return neuron.get_potential()
 
     def plot_line(self, layer_name, dt):
         self._plot_line(layer_name, dt, 'Время (мс)', 'Нейрон', 
@@ -83,12 +81,9 @@ class PotentialMonitor(MonitorLayer):
         self._plot_imshow(layer_name, dt, 'Время (мс)', 'Нейрон', 
                           f"Потенциалы слоя {layer_name}")
 
-class CurrentMonitor(MonitorLayer):
-    def _get_layer_data(self, layer):
-        return layer.get_outputs()
-
-    def get_data(self, layer_name):
-        return np.array(super().get_data(layer_name))
+class MonitorCurrent(MonitorNeuron):
+    def _request_data_from_obj(self, neuron: Neuron) -> np.ndarray:
+        return neuron.get_current()
     
     def plot_line(self, layer_name, dt):
         self._plot_line(layer_name, dt, 'Время (мс)', 'Нейрон', 
@@ -98,24 +93,13 @@ class CurrentMonitor(MonitorLayer):
         self._plot_imshow(layer_name, dt, 'Время (мс)', 'Нейрон', 
                           f"Токи слоя {layer_name}")
 
-    # def plot(self, layer_name, dt):
-    #     data = self.get_data(layer_name)
-    #     times = (self.counter - len(data) + np.arange(len(data))) * dt
-    #     plt.imshow(data.T, extent=[times[0], times[-1], 0, data.shape[1]], 
-    #                aspect='auto', origin='lower', interpolation='none')
-    #     plt.colorbar()
-    #     plt.xlabel('Время (мс)')
-    #     plt.ylabel('Нейроны')
-    #     plt.title(f"Токи слоя {layer_name}")
-    #     plt.show()
 
-
-class SpikeMonitor(MonitorLayer):
-    def _get_layer_data(self, layer):
-        outputs = layer.get_spikes()
+class MonitorSpike(MonitorNeuron):
+    def _request_data_from_obj(self, neuron: Neuron) -> np.ndarray:
+        outputs = neuron.get_spike()
         return [i for i, val in enumerate(outputs) if val]
 
-    def plot(self, layer_name, dt):
+    def plot_scatter(self, layer_name, dt):
         data = self.get_data(layer_name)
         plt.figure()
         for t, spikes in enumerate(data):
@@ -128,40 +112,11 @@ class SpikeMonitor(MonitorLayer):
         plt.show()
         
 
-class MonitorConnection:
-    def __init__(self, name, connections, save_step=1, max_points=None):
-        """
-        name: имя монитора
-        connections: Connection или список соединений для мониторинга
-        save_step: сохранять данные каждый n-й вызов collect
-        max_points: максимальное количество последних точек для хранения (None - без ограничения)
-        """
-        self.name = name
-        if not isinstance(connections, list):
-            connections = [connections]
-        self.connections = connections
-        self.save_step = max(1, save_step)
-        self.max_points = max_points
-        self.counter = 0
-        self.data = {conn.name: [] for conn in self.connections}
-
-    def collect(self):
-        self.counter += 1
-        if self.counter % self.save_step != 0:
-            return
-        for conn in self.connections:
-            weights_copy = conn.weights.copy()
-            points = self.data[conn.name]
-            points.append(weights_copy)
-            if self.max_points is not None and len(points) > self.max_points:
-                points.pop(0)
-
-    def get_data(self, connection_name):
-        if connection_name not in self.data:
-            raise ValueError(f"Данные для соединения {connection_name} не собраны")
-        return self.data[connection_name]
-
-    def plot(self, connection_name, dt):
+class MonitorWeigts(Monitor):
+    def _request_data_from_obj(self, synapse: Synapse) -> np.ndarray:
+        return synapse.get_weight()
+    
+    def plot_imshow(self, connection_name, dt):
         data = self.get_data(connection_name)
         arr = np.array(data)
         if arr.ndim == 3:

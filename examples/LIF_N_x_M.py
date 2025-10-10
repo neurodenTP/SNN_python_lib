@@ -8,8 +8,7 @@ import matplotlib.pyplot as plt
 from neuron import LIFNeuron
 from synapse import Synapse
 from network import Network
-# from monitor import PotentialMonitor, CurrentMonitor, SpikeMonitor
-# from monitor import MonitorSynapse
+from monitor import MonitorPotential, MonitorCurrent, MonitorSpike, MonitorWeigts
 
 net = Network()
 
@@ -45,10 +44,10 @@ syn = Synapse('in_out', neuron_input, neuron_output,
 
 net.add_synapse(syn)
 
-# monitor_U = PotentialMonitor('U', [layer_input, layer_output])
-# monitor_Iout = CurrentMonitor('Iout', [layer_input, layer_output])
+monitor_U = MonitorPotential('U', [neuron_input, neuron_output])
+monitor_Iout = MonitorCurrent('Iout', [neuron_input, neuron_output])
 
-# net.add_monitors([monitor_U, monitor_Iout])
+net.add_monitors([monitor_U, monitor_Iout])
 
 t_steps = 100
 dt = 1
@@ -61,14 +60,14 @@ model_input_current = {'input': signal_in,
 
 net.run(dt, model_input_current)
 
-# monitor_U.plot_line('input', dt)
-# plt.show()
-# monitor_U.plot_line('output', dt)
-# plt.show()
+monitor_U.plot_line('input', dt)
+plt.show()
+monitor_U.plot_line('output', dt)
+plt.show()
 
 # monitor_Iout.plot_line('input', dt)
 # plt.show()
 # monitor_Iout.plot_line('output', dt)
 # plt.show()
 
-print(net.neurons['output'].get_potential())
+# print(net.neurons['output'].get_potential())

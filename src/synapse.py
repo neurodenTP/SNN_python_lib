@@ -30,6 +30,9 @@ class Synapse:
         """
         return np.dot(self.weight, pre_current)
 
+    def get_weight(self) -> np.ndarray:
+        return self.weight
+
     def update_weight(self, dt: float):
         """Обновление весов синапса (метод-заглушка)."""
         pass

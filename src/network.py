@@ -1,7 +1,7 @@
 import numpy as np
 from neuron import Neuron
 from synapse import Synapse
-# from monitor import Monitor
+from monitor import Monitor
 
 class Network:
     def __init__(self):
@@ -55,30 +55,30 @@ class Network:
             for name in synapse_names:
                 del self.synapses[name]
     
-    # """Операции с мониторами"""
-    # def add_monitor(self, monitor: Monitor):
-    #     if monitor.name in self.monitors:
-    #         raise ValueError(f"Монитор с именем {monitor.name} уже существует")
-    #     self.monitors[monitor.name] = monitor
+    """Операции с мониторами"""
+    def add_monitor(self, monitor: Monitor):
+        if monitor.name in self.monitors:
+            raise ValueError(f"Монитор с именем {monitor.name} уже существует")
+        self.monitors[monitor.name] = monitor
         
-    # def add_monitors(self, monitors: list[Monitor]):
-    #     for monitor in monitors:
-    #         self.add_monitor(monitor)   
+    def add_monitors(self, monitors: list[Monitor]):
+        for monitor in monitors:
+            self.add_monitor(monitor)   
         
-    # def remove_monitors(self, monitor_names: list[str] = None):
-    #     if monitor_names is None:
-    #         self.monitors.clear()
-    #     else:
-    #         for name in monitor_names:
-    #             del self.monitors[name]
+    def remove_monitors(self, monitor_names: list[str] = None):
+        if monitor_names is None:
+            self.monitors.clear()
+        else:
+            for name in monitor_names:
+                del self.monitors[name]
 
-    # def clear_monitors(self, monitor_names: list[str] = None):
-    #     if monitor_names is None:
-    #         for monitor in self.monitors.values():
-    #             monitor.reset()
-    #     else:
-    #         for name in monitor_names:
-    #             monitor[name].clear()
+    def clear_monitors(self, monitor_names: list[str] = None):
+        if monitor_names is None:
+            for monitor in self.monitors.values():
+                monitor.reset()
+        else:
+            for name in monitor_names:
+                monitor[name].clear()
 
 
     """Расчетная часть"""
@@ -106,13 +106,13 @@ class Network:
         for neuron_name, neuron in self.neurons.items():
             neuron.step(dt, I_in[neuron_name])
     
-        # Производим обучение (если реализовано) для всех соединений
+        # Производим обучение для всех соединений
         for synapse in self.synapses.values():
             synapse.update_weight(dt)
                 
-        # # Коллекция данных мониторами
-        # for monitor in self.monitors.values():
-        #     monitor.collect()
+        # Сбор данных мониторами
+        for monitor in self.monitors.values():
+            monitor.collect()
 
     def run(self, dt, inputs):
         """
