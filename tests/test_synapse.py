@@ -1,18 +1,19 @@
 import unittest
 import numpy as np
 from synapse import Synapse
-
-class DummyNeuron:
-    """Простой класс-заглушка для нейрона с числом нейронов N и названием"""
-    def __init__(self, N):
-        self.N = N
+from neuron import Neuron
 
 class TestSynapse(unittest.TestCase):
 
     def setUp(self):
         # Создаем два слоя нейронов-заглушек для тестов с разным числом нейронов
-        self.pre = DummyNeuron(3)
-        self.post = DummyNeuron(4)
+        params = {
+            'Ustart': 1,
+            'Istart': 0,
+            'Sstart': False
+        }
+        self.pre = Neuron('pre', 3, params)
+        self.post = Neuron('post', 4, params)
 
     def test_random_weight_generation(self):
         syn = Synapse("syn1", self.pre, self.post)
