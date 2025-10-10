@@ -1,51 +1,87 @@
 import numpy as np
-
+from neuron import Neuron
+from synapse import Synapse
+# from monitor import Monitor
 
 class Network:
     def __init__(self):
-        self.layers = {}        # словарь: имя слоя -> Layer
-        self.connections = {}   # словарь: имя соединения -> Connection
+        self.neurons = {}    # словарь: имя слоя -> neuron
+        self.synapses = {}   # словарь: имя соединения -> synapse
         self.monitors = {}
 
-    def add_layer(self, layer):
-        if layer.name in self.layers:
-            raise ValueError(f"Слой с именем {layer.name} уже существует")
-        self.layers[layer.name] = layer
-        
-    def add_layers(self, layers):
-        for layer in layers:
-            self.add_layer(layer)
 
-    def add_connection(self, connection):
-        if connection.name in self.connections:
-            raise ValueError(f"Соединение с именем {connection.name} уже существует")
-        if (connection.target_layer.name not in self.layers or 
-            connection.source_layer.name not in self.layers):
+    """Операции с нейронами"""
+    def add_neuron(self, neuron: Neuron):
+        if neuron.name in self.neurons:
+            raise ValueError(f"Нейрон с именем {neuron.name} уже существует")
+        self.neurons[neuron.name] = neuron
+        
+    def add_neurons(self, neurons: list[Neuron]):
+        for neuron in neurons:
+            self.add_neuron(neuron)
+            
+    def remove_neurons(self, neuron_names: list[str] = None):
+        if neuron_names is None:
+            self.neurons.clear()
+        else:
+            for name in neuron_names:
+                del self.neurons[name]
+    
+    def reset_neurons(self, neuron_names: list[str] = None):
+        if neuron_names is None:
+            for neuron in self.neurons.values():
+                neuron.reset()
+        else:
+            for name in neuron_names:
+                neuron[name].reset()
+        
+    """Операции с синасами"""
+    def add_synapse(self, synapse: Synapse):
+        if synapse.name in self.synapses:
+            raise ValueError(f"Соединение с именем {synapse.name} уже существует")
+        if (synapse.pre.name not in self.neurons or 
+            synapse.post.name not in self.neurons):
             raise ValueError("Указанные слои должны существовать в сети")
-        self.connections[connection.name] = connection
+        self.synapses[synapse.name] = synapse
         
-    def add_connections(self, connections):
-        for connection in connections:
-            self.add_connection(connection)
+    def add_synapses(self, synapses: list[Synapse]):
+        for synapse in synapses:
+            self.add_synapse(synapse)
     
-    def add_monitor(self, monitor):
-        if monitor.name in self.monitors:
-            raise ValueError(f"Монитор с именем {monitor.name} уже существует")
-        self.monitors[monitor.name] = monitor
-        
-    def add_monitors(self, monitors):
-        for monitor in monitors:
-            self.add_monitor(monitor)   
-        
-    def remove_monitor(self, name):
-        if name in self.monitors:
-            del self.monitors[name]
+    def remove_synapses(self, synapse_names: list[str] = None):
+        if synapse_names is None:
+            self.synapses.clear()
+        else:
+            for name in synapse_names:
+                del self.synapses[name]
     
+    # """Операции с мониторами"""
+    # def add_monitor(self, monitor: Monitor):
+    #     if monitor.name in self.monitors:
+    #         raise ValueError(f"Монитор с именем {monitor.name} уже существует")
+    #     self.monitors[monitor.name] = monitor
+        
+    # def add_monitors(self, monitors: list[Monitor]):
+    #     for monitor in monitors:
+    #         self.add_monitor(monitor)   
+        
+    # def remove_monitors(self, monitor_names: list[str] = None):
+    #     if monitor_names is None:
+    #         self.monitors.clear()
+    #     else:
+    #         for name in monitor_names:
+    #             del self.monitors[name]
 
-    def reset(self):
-        for layer in self.layers.values():
-            layer.reset()
+    # def clear_monitors(self, monitor_names: list[str] = None):
+    #     if monitor_names is None:
+    #         for monitor in self.monitors.values():
+    #             monitor.reset()
+    #     else:
+    #         for name in monitor_names:
+    #             monitor[name].clear()
 
+
+    """Расчетная часть"""
     def step(self, dt, I_external):
         """
         Шаг времени dt.
@@ -53,31 +89,30 @@ class Network:
         """
         # Инициализируем входы нейронов каждого слоя внешними токами
         I_in = {}
-        for layer_name, layer in self.layers.items():
+        for neuron_name, neuron in self.neurons.items():
             # Создаем копии внешних токов, чтобы их модифицировать дальше
-            I_in[layer_name] = np.array(I_external.get(layer_name, np.zeros(layer.neurons_num)))
+            I_in[neuron_name] = np.array(I_external.get(neuron_name, np.zeros(neuron.N)))
     
         # Добавляем входы от соединений
-        for connection in self.connections.values():
+        for synapse in self.synapses.values():
             # Получаем выходные токи исходного слоя
-            I_out_source = np.array(connection.source_layer.get_outputs())
+            I_out_pre = np.array(synapse.pre.get_current())
             # Прогоняем их через веса соединения
-            I_in_target = connection.propagate(I_out_source)
+            I_in_post = synapse.propagate(I_out_pre)
             # Складываем с текущими входными токами целевого слоя
-            I_in[connection.target_layer.name] += I_in_target
+            I_in[synapse.post.name] += I_in_post
     
         # Делаем шаг для каждого слоя с суммарным входом
-        for layer_name, layer in self.layers.items():
-            layer.step(dt, I_in[layer_name])
+        for neuron_name, neuron in self.neurons.items():
+            neuron.step(dt, I_in[neuron_name])
     
         # Производим обучение (если реализовано) для всех соединений
-        for connection in self.connections.values():
-            if hasattr(connection, 'learning'):
-                connection.update_weights(dt)
+        for synapse in self.synapses.values():
+            synapse.update_weight(dt)
                 
-        # Коллекция данных мониторами
-        for monitor in self.monitors.values():
-            monitor.collect()
+        # # Коллекция данных мониторами
+        # for monitor in self.monitors.values():
+        #     monitor.collect()
 
     def run(self, dt, inputs):
         """
@@ -98,6 +133,5 @@ class Network:
                 raise ValueError("Все входы должны иметь одинаковое число временных шагов")
     
         for t in range(num_steps):
-            inputs_t = {layer: inputs[layer][t] for layer in inputs}
+            inputs_t = {neuron: inputs[neuron][t] for neuron in inputs}
             self.step(dt, inputs_t)
-   

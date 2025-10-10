@@ -1,5 +1,7 @@
 import numpy as np
 
+#TODO когда нейроны одинаковые нужно отработать без создания массивов всех параметров
+
 class Neuron:
     def __init__(self, name: str, N: int, params: dict):
         """
@@ -13,6 +15,7 @@ class Neuron:
             
         """
         self.N = N
+        self.name = name
         self.params = params.copy()
         
         self.check_params(['Ustart', 'Istart', 'Sstart'])
