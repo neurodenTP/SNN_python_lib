@@ -1,7 +1,7 @@
 import numpy as np
 
 class Neuron:
-    def __init__(self, name, N, params):
+    def __init__(self, name: str, N: int, params: dict):
         """
         Инициализация базового нейрона.
 
@@ -28,7 +28,7 @@ class Neuron:
         self.I = self.istart.copy()
         self.S = self.sstart.copy()
 
-    def check_params(self, keys):
+    def check_params(self, keys: list[str]):
         N = self.N
         for key in keys:
             if key not in self.params:
@@ -43,21 +43,21 @@ class Neuron:
         self.I = self.istart.copy()
         self.S = self.sstart.copy()
 
-    def step(self, dt, Iin):
+    def step(self, dt: float, Iin: np.ndarray):
         pass
         
-    def get_potential(self):
+    def get_potential(self) -> np.ndarray:
         return self.U
     
-    def get_current(self):
+    def get_current(self) -> np.ndarray:
         return self.I
     
-    def get_spike(self):
+    def get_spike(self) -> np.ndarray:
         return self.S
 
 
 class LIFNeuron(Neuron):
-    def __init__(self, name, N, params):
+    def __init__(self, name: str, N: int, params: dict):
         """
         Инициализация LIF нейрона.
 
@@ -87,7 +87,7 @@ class LIFNeuron(Neuron):
         self.itay = self.params['Itay']
         self.imax = self.params['Imax']
 
-    def step(self, dt, Iin):
+    def step(self, dt: float, Iin: np.ndarray):
         # self.U *= np.exp(- dt / self.utay) 
         self.U *= (1 - dt / self.utay)
         self.U += Iin
@@ -105,7 +105,7 @@ class LIFNeuron(Neuron):
 
             
 class AdaptiveLIFNeuron(Neuron):
-    def __init__(self, name, N, params):
+    def __init__(self, name: str, N: int, params: dict):
         """
         Инициализация LIF Adaptive нейрона.
 
@@ -148,7 +148,7 @@ class AdaptiveLIFNeuron(Neuron):
         self.I = self.istart.copy()
         self.S = self.sstart.copy()
 
-    def step(self, dt, Iin):
+    def step(self, dt: float, Iin: np.ndarray):
         # self.U *= np.exp(- dt / self.utay)
         self.U *= (1 - dt / self.utay)
         self.U += Iin

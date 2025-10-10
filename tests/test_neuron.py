@@ -8,7 +8,6 @@ import numpy as np
 
 
 class TestNeuron(unittest.TestCase):
-
     def test_neuron_init_valid_and_invalid_params(self):
         N = 10
         # Корректные параметры
