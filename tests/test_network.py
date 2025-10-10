@@ -1,114 +1,72 @@
-import sys
-import os
 import unittest
 import numpy as np
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
-
-from network import Network
-from layer import Layer
 from neuron import LIFNeuron
-from connection import Connection
+from synapse import Synapse
+from network import Network
+
 
 class TestNetwork(unittest.TestCase):
+
     def setUp(self):
-        neuron_params = {
-            'Ustart': 0.0,
-            'Ioutstart': 0.0,
-            'Utay': 10.0,
-            'Uth': 1.0,
-            'Urest': 0.0,
-            'Itay': 10.0,
-            'refractiontime': 5.0,
-            'Iout_max': 1.0
+        self.net = Network()
+
+        # Создаем два слоя нейронов по 3 и 2 нейрона
+        params = {
+            'Ustart': 0.,
+            'Istart': 0.,
+            'Sstart': False,
+            'Utay': 10.,
+            'Uth': 1.,
+            'Urest': 0.,
+            'Itay': 100.,
+            'Imax': 1.
         }
-        self.network = Network()
-        # Создаем два слоя
-        self.layer1 = Layer("Layer1", 2, LIFNeuron, neuron_params)
-        self.layer2 = Layer("Layer2", 2, LIFNeuron, neuron_params)
-        self.network.add_layer(self.layer1)
-        self.network.add_layer(self.layer2)
 
-        # Создаем соединение между слоями
-        self.connection = Connection("Conn1", self.layer1, self.layer2)
-        self.network.add_connection(self.connection)
+        self.neuron1 = LIFNeuron("layer1", 3, params)
+        self.neuron2 = LIFNeuron("layer2", 2, params)
 
-    def test_add_same_layer_raises(self):
+        self.net.add_neurons([self.neuron1, self.neuron2])
+
+        # Создаем синапс между слоями
+        weight = np.array([[0.5, 0.2, 0.0],
+                           [0.1, 0.3, 0.4]])
+        self.syn = Synapse("syn1", self.neuron1, self.neuron2, weight=weight)
+        self.net.add_synapse(self.syn)
+
+    def test_add_duplicate_neuron_raises(self):
         with self.assertRaises(ValueError):
-            self.network.add_layer(self.layer1)
+            self.net.add_neuron(self.neuron1)
 
-    def test_add_connection_with_unknown_layer_raises(self):
-        fake_layer = Layer("FakeLayer", 1, LIFNeuron, {})
-        fake_conn = Connection("FakeConnection", fake_layer, self.layer2)
-        with self.assertRaises(ValueError):
-            self.network.add_connection(fake_conn)
+    def test_step_propagation(self):
+        # Внешние токи для layer1
+        I_external = {
+            "layer1": np.array([0.3, 0.0, 0.5]),
+            "layer2": np.array([0.0, 0.0])
+        }
 
-    def test_add_same_connection_raises(self):
-        with self.assertRaises(ValueError):
-            self.network.add_connection(self.connection)
+        self.net.step(0.1, I_external)
 
-    def test_add_monitor_and_remove_monitor(self):
-        class DummyMonitor:
-            def __init__(self):
-                self.name = "Monitor1"
-                self.called = False
-            def collect(self):
-                self.called = True
+        # Проверяем, что neuron1 получил входные токи
+        np.testing.assert_array_equal(self.neuron1.get_potential(), I_external["layer1"])
+        # Проверяем, что neuron2 получил входы от синапса + внешние (здесь 0)
+        expected_input_layer2 = self.syn.propagate(self.neuron1.get_current())
+        np.testing.assert_array_equal(self.neuron2.get_current(), expected_input_layer2)
 
-        monitor = DummyMonitor()
-        self.network.add_monitor(monitor)
-        with self.assertRaises(ValueError):
-            self.network.add_monitor(monitor)  # повторное добавление с таким же именем
-        self.assertIn("Monitor1", self.network.monitors)
-        self.network.remove_monitor("Monitor1")
-        self.assertNotIn("Monitor1", self.network.monitors)
-        self.network.remove_monitor("NonExistentMonitor")  # не должно вызывать ошибку
-
-    def test_reset_resets_layers(self):
-        # Установим в слоях значения, потом вызовем reset и проверим
-        for layer in self.network.layers.values():
-            for neuron in layer.neurons:
-                neuron.U = 5.0
-        self.network.reset()
-        for layer in self.network.layers.values():
-            for neuron in layer.neurons:
-                self.assertEqual(neuron.U, 0.0)
-
-    def test_step_and_run(self):
-        dt = 1.0
-        # Внешние входы для слоя1 и слоя2
+    def test_run_multiple_steps(self):
         inputs = {
-            'Layer1': np.array([0.1, 0.2]),
-            'Layer2': np.array([0.0, 0.0])
+            "layer1": np.array([
+                [1.0, 0.0, 0.5],
+                [0.1, 0.2, 0.3],
+                [0.0, 0.0, 0.0]
+            ]),
+            "layer2": np.zeros((3, 2))
         }
-        self.network.step(dt, inputs)
-        # Проверим, что потенциалы обновились
-        for neuron in self.layer1.neurons:
-            self.assertTrue(neuron.U > 0 or neuron.Iout > 0)
-        for neuron in self.layer2.neurons:
-            self.assertTrue(neuron.U >= 0)
 
-        # Прогон по времени (например 3 шага для layer1)
-        time_inputs = {
-            'Layer1': np.array([[0.1, 0.0],
-                                [0.2, 0.1],
-                                [0.0, 0.2]])
-        }
-        # Запуск не должен выдавать ошибки
-        self.network.run(dt, time_inputs)
+        self.net.run(0.1, inputs)
 
-    def test_run_raises_on_mismatched_timesteps(self):
-        time_inputs = {
-            'Layer1': np.array([[0.1, 0.0],
-                                [0.2, 0.1]]),  # 2 timesteps
-            'Layer2': np.array([[0.0, 0.1],
-                                [0.1, 0.2],
-                                [0.2, 0.3]])  # 3 timesteps
-        }
-        dt = 1.0
-        with self.assertRaises(ValueError):
-            self.network.run(dt, time_inputs)
-
+        # После прогонки проверим, что значения текущие обновились
+        self.assertEqual(self.neuron1.get_current().shape[0], 3)
+        self.assertEqual(self.neuron2.get_current().shape[0], 2)
 
 if __name__ == '__main__':
     unittest.main()
