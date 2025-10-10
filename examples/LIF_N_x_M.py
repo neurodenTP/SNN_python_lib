@@ -28,7 +28,7 @@ params_neuron_out = {
     'Itay': 100., 'Imax': 1.0
 }
 
-num_neuron_in = 2
+num_neuron_in = 4
 num_neuron_out = 3
 
 neuron_input =  LIFNeuron('input', num_neuron_in, params_neuron_in)
