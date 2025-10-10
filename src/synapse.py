@@ -86,6 +86,17 @@ class SynapseSTDP(Synapse):
         """
         
 class SynapseLTPf(Synapse):
+    def __init__(self, name: str, preNeuron, postNeuron,
+                 weight: np.ndarray = None, params = None):
+        super().__init__(name, preNeuron, postNeuron, weight, params)
+        
+        self.check_params(['Aplus', 'Tplus', 'Aforgetting'])
+        self.a_plus = self.params['Aplus']
+        self.tay_plus = self.params['Tplus']
+        self.a_forg = self.params['Aforgetting']
+        
+        self.pre_trace = np.zeros(self.weight_shape[1])
+        
     def update_weight(self, dt: float):
         """Обновление весов синапса"""
         
