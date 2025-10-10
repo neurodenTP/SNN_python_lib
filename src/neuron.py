@@ -88,6 +88,7 @@ class LIFNeuron(Neuron):
         self.imax = self.params['Imax']
 
     def step(self, dt, Iin):
+        # self.U *= np.exp(- dt / self.utay) 
         self.U *= (1 - dt / self.utay)
         self.U += Iin
         
@@ -98,6 +99,7 @@ class LIFNeuron(Neuron):
         self.I[ind_spike] = self.imax[ind_spike]
         self.U[ind_spike] = self.urest[ind_spike]
         
+        # self.I[ind_no_spike] *= np.exp(- dt / self.itay[ind_no_spike])
         self.I[ind_no_spike] *= (1 - dt / self.itay[ind_no_spike])
 
 
@@ -147,6 +149,7 @@ class AdaptiveLIFNeuron(Neuron):
         self.S = self.sstart.copy()
 
     def step(self, dt, Iin):
+        # self.U *= np.exp(- dt / self.utay)
         self.U *= (1 - dt / self.utay)
         self.U += Iin
         
@@ -158,7 +161,9 @@ class AdaptiveLIFNeuron(Neuron):
         self.V[ind_spike] -= self.vstep[ind_spike]
         self.U[ind_spike] = self.V.copy()[ind_spike]
         
+        # self.I[ind_no_spike] *= np.exp(- dt / self.itay[ind_no_spike])
         self.I[ind_no_spike] *= (1 - dt / self.itay[ind_spike])
+        # self.U[ind_no_spike] *= np.exp(- dt / self.vtay[ind_spike])
         self.U[ind_no_spike] *= (1 - dt / self.vtay[ind_spike])
 
 
