@@ -62,50 +62,68 @@ class SynapseSTDP(Synapse):
                  weight: np.ndarray = None, params = None):
         super().__init__(name, preNeuron, postNeuron, weight, params)
         
-        self.check_params(['Aplus', 'Aminus', 'Tplus', 'Tminus'])
+        self.check_params(['Aplus', 'Aminus', 'Tpre', 'Tpost'])
         self.a_plus = self.params['Aplus']
         self.a_minus = self.params['Aminus']
-        self.tay_plus = self.params['Tplus']
-        self.tay_minus = self.params['Tminus']
+        self.tay_pre = self.params['Tpre']
+        self.tay_post = self.params['Tpost']
         
-        self.pre_trace = np.zeros(self.weight_shape[1])
-        self.post_trace = np.zeros(self.weight_shape[0])
+        self.trace_pre = np.zeros(self.weight_shape[1])
+        self.trace_post = np.zeros(self.weight_shape[0])
     
     def update_weight(self, dt: float):
-        """Обновление весов синапса"""
+        """
+        Обновление весов синапса
+        dd - dirac delta
+        
+        dtrace_ / dt = -trace_ / tay_ + Sum(dd(t-t_))
+        
+        dw/dt = Aplus * trace_pre * dd(t-t_post) * (1-w) -
+                - Aminus * trace_post * dd(t-t_pre) * w
         
         """
-        Матрично
-        идем по пре, обновляем все следы * и прибавить если спайк
-        идет по пост, обновляем все следы * и прибавить если спайк
+        trace_pre = self.trace_pre
+        trace_post = self.trace_post
+        weight = self.weight
+        spike_pre = self.pre.get_spike()
+        spike_post = self.post.get_spike()
         
-        Итак имеем следы.
+        trace_pre *= (1 - dt / self.tay_pre)
+        trace_post *= (1 - dt / self.tay_pre)
         
-        умножаем спайки пост на след пре на А - прибавляем к весу
-        умножааем спайки пре на след пост на А - вычитаем 
-        """
+        trace_pre += spike_pre
+        trace_post += spike_post
+        
+        weight += self.a_plus * spike_post * trace_pre * dt * (1 - weight)
+        weight -= self.a_minus * spike_pre * trace_post * dt * weight
+        
         
 class SynapseLTPf(Synapse):
     def __init__(self, name: str, preNeuron, postNeuron,
                  weight: np.ndarray = None, params = None):
         super().__init__(name, preNeuron, postNeuron, weight, params)
         
-        self.check_params(['Aplus', 'Tplus', 'Aforgetting'])
+        self.check_params(['Aplus', 'Tpre', 'Aforgetting'])
         self.a_plus = self.params['Aplus']
-        self.tay_plus = self.params['Tplus']
+        self.tay_pre = self.params['Tpre']
         self.a_forg = self.params['Aforgetting']
         
-        self.pre_trace = np.zeros(self.weight_shape[1])
+        self.trace_pre = np.zeros(self.weight_shape[1])
         
     def update_weight(self, dt: float):
-        """Обновление весов синапса"""
-        
         """
-        Матрично
-        идем по пре, обновляем все следы * и прибавить если спайк
+        Обновление весов синапса
+        dd - dirac delta
         
-        Итак имеем следы.
+        dtrace_pre / dt = -trace_pre / tay_pre + Sum(dd(t-t_pre))
         
-        умножаем спайки пост на след пре на А - прибавляем к весу
-        вычитаем на фиксированное число
+        dw/dt = (Aplus * trace_pre * (1-w) - Aforg * w) * dd(t-t_post)
         """
+        trace_pre = self.trace_pre
+        weight = self.weight
+        
+        trace_pre *= (1 - dt / self.tay_pre)
+        trace_pre += self.pre.get_spike()
+        
+        weight += (self.a_plus * trace_pre * (1 - weight) - 
+                   self.a_forg * weight) * self.post.get_spike() * dt
