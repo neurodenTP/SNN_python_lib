@@ -16,7 +16,7 @@ class Monitor():
         if not isinstance(objs, list):
             objs = [objs]
         self.objs = objs
-        self.save_step = max(1, save_step)
+        self.save_step = save_step
         self.max_points = max_points
         self.counter = 0
 
@@ -28,7 +28,7 @@ class Monitor():
     def get_data(self, obj_name) -> np.ndarray:
         if obj_name not in self.data:
             raise ValueError(f"Данные для {obj_name} не собраны")
-        return np.array(self.data[obj_name])
+        return self.data[obj_name]
     
     def collect(self):
         self.counter += 1
@@ -37,7 +37,6 @@ class Monitor():
         for obj in self.objs:
             datum = self._request_data_from_obj(obj).copy()
             points = self.data[obj.name]
-            print(points)
             points.append(datum)
             if self.max_points is not None and len(points) > self.max_points:
                 points.pop(0)
@@ -48,7 +47,7 @@ class Monitor():
 
 class MonitorNeuron(Monitor):    
     def _plot_line(self, layer_name, dt, xlabel, ylabel, title):
-        data = self.get_data(layer_name)
+        data = np.array(self.get_data(layer_name))
         times = (self.counter - len(data) + np.arange(len(data))) * dt
 
         for i in range(len(data[0])):
@@ -59,7 +58,7 @@ class MonitorNeuron(Monitor):
         plt.legend()
             
     def _plot_imshow(self, layer_name, dt, xlabel, ylabel, title):
-        data = self.get_data(layer_name)
+        data = np.array(self.get_data(layer_name))
         times = (self.counter - len(data) + np.arange(len(data))) * dt
         plt.imshow(data.T, extent=[times[0], times[-1], 0, data.shape[1]], 
                    aspect='auto', origin='lower', interpolation='none')
@@ -100,14 +99,26 @@ class MonitorSpike(MonitorNeuron):
         return [i for i, val in enumerate(outputs) if val]
 
     def plot_scatter(self, layer_name, dt):
+        #TODO rewrite
         data = self.get_data(layer_name)
-        plt.figure()
+        
+        N = 0
+        for spikes in data:
+            for spike in spikes:
+                if spike > N:
+                    N = 1 * spike
+
+        data_np = [np.ones((0,2)) for i in range(N+1)]
         for t, spikes in enumerate(data):
-            y = np.ones(len(spikes)) * (self.counter - len(data) + t) * dt
-            x = spikes
-            plt.scatter(x, y, marker='|')
-        plt.xlabel('Нейроны')
-        plt.ylabel('Время (мс)')
+            for spike in spikes:
+                data_np[spike] = np.vstack((data_np[spike], np.array([[t*dt, spike]])))
+                
+        plt.figure()
+        for data_one in data_np:
+            plt.scatter(data_one[:,0], data_one[:,1])
+            
+        plt.xlabel('Время (мс)')
+        plt.ylabel('Нейроны')
         plt.title(f"Спайки слоя {layer_name}")
         plt.show()
         
@@ -117,7 +128,7 @@ class MonitorWeigts(Monitor):
         return synapse.get_weight()
     
     def plot_imshow(self, connection_name, dt):
-        data = self.get_data(connection_name)
+        data = np.array(self.get_data(connection_name))
         arr = np.array(data)
         if arr.ndim == 3:
             # Среднее по времени
@@ -129,6 +140,19 @@ class MonitorWeigts(Monitor):
         plt.colorbar()
         plt.xlabel('Нейроны исходного слоя')
         plt.ylabel('Нейроны целевого слоя')
-        timespan = (self.counter - len(data), self.counter) if self.max_points else (0, len(data))
+        # timespan = (self.counter - len(data), self.counter) if self.max_points else (0, len(data))
+        plt.title(f"Весы соединения {connection_name}\nПоследние {len(data)} шагов (dt={dt})")
+        plt.show()
+        
+    def plot_line(self, connection_name, dt):
+        data = np.array(self.get_data(connection_name))
+        times = (self.counter - len(data) + np.arange(len(data))) * dt
+        for post in range(len(data[0])):
+            for pre in range(len(data[0, 0])):
+                plt.plot(times, data[:, post, pre], label=f"{pre} to {post}")
+        
+        plt.xlabel('Времяб (мс)')
+        plt.ylabel('Веса')
+        plt.legend()
         plt.title(f"Весы соединения {connection_name}\nПоследние {len(data)} шагов (dt={dt})")
         plt.show()

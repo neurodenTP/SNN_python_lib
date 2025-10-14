@@ -8,10 +8,11 @@ import matplotlib.pyplot as plt
 from neuron import LIFNeuron
 from synapse import Synapse
 from network import Network
-from monitor import MonitorPotential, MonitorCurrent, MonitorSpike, MonitorWeigts
+from monitor import MonitorPotential, MonitorCurrent, MonitorSpike
 
 net = Network()
 
+# Добавляем слои нейронов
 params_neuron_in = {
     'Ustart': 0.0,
     'Istart': 0.0,
@@ -36,6 +37,7 @@ neuron_output =  LIFNeuron('output', num_neuron_out, params_neuron_out)
 
 net.add_neurons([neuron_input, neuron_output])
 
+# Добавляем связь между слоями
 weights = np.array([[0.5*(i==j) for i in range(num_neuron_in)] 
                     for j in range(num_neuron_out)])
 syn = Synapse('in_out', neuron_input, neuron_output, 
@@ -44,11 +46,14 @@ syn = Synapse('in_out', neuron_input, neuron_output,
 
 net.add_synapse(syn)
 
+# Добавляем мониторы
 monitor_U = MonitorPotential('U', [neuron_input, neuron_output])
 monitor_Iout = MonitorCurrent('Iout', [neuron_input, neuron_output])
+monitor_S = MonitorSpike('S', [neuron_input, neuron_output])
 
-net.add_monitors([monitor_U, monitor_Iout])
+net.add_monitors([monitor_U, monitor_Iout, monitor_S])
 
+# Задание внешних сигналов и расчет
 t_steps = 100
 dt = 1
 
@@ -60,6 +65,7 @@ model_input_current = {'input': signal_in,
 
 net.run(dt, model_input_current)
 
+# Визуализация
 monitor_U.plot_line('input', dt)
 plt.show()
 monitor_U.plot_line('output', dt)
@@ -69,4 +75,8 @@ monitor_Iout.plot_line('input', dt)
 plt.show()
 monitor_Iout.plot_line('output', dt)
 plt.show()
-print(monitor_U.get_data('output'))
+
+monitor_S.plot_scatter('input', dt)
+plt.show()
+monitor_S.plot_scatter('output', dt)
+plt.show()
