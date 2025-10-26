@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from synapse import Synapse
+from synapse import Synapse, SynapseSTDP, SynapseLTPf
 from neuron import Neuron
 
 class TestSynapse(unittest.TestCase):
@@ -10,7 +10,7 @@ class TestSynapse(unittest.TestCase):
         params = {
             'Ustart': 1,
             'Istart': 0,
-            'Sstart': False
+            'Sstart': True
         }
         self.pre = Neuron('pre', 3, params)
         self.post = Neuron('post', 4, params)
@@ -61,6 +61,34 @@ class TestSynapse(unittest.TestCase):
         invalid_w = np.ones((self.pre.N, self.post.N))
         with self.assertRaises(ValueError):
             syn.reset_weight(invalid_w)
+            
+    def test_STDP_update_weight(self):
+        params_syn_STDP = {'Aplus': 0.1, 'Aminus': 0.1,
+                           'Tpre': 20, 'Tpost': 20}
+        w = np.array([
+            [1, 0, 2],
+            [0, 0, 1],
+            [3, -1, 0],
+            [0, 2, 1]
+        ], dtype = 'float64')
+        syn = SynapseSTDP("syn6", self.pre, self.post, 
+                          weight=w, params=params_syn_STDP)
+        syn.update_weight(1)
+        
+    def test_LTPf_update_weight(self):
+        params_syn_LTPf = {'Aplus': 0.01, 'Aforgetting': 0.005,
+                           'Tpre': 20}
+        w = np.array([
+            [1, 0, 2],
+            [0, 0, 1],
+            [3, -1, 0],
+            [0, 2, 1]
+        ], dtype = 'float64')
+        syn = SynapseLTPf("syn7", self.pre, self.post, 
+                          weight=w, params=params_syn_LTPf)
+        syn.update_weight(1)
+        print(syn.weight)
+        
 
 if __name__ == '__main__':
     unittest.main()

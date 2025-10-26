@@ -94,10 +94,10 @@ class SynapseSTDP(Synapse):
         trace_pre += spike_pre
         trace_post += spike_post
         
-        weight += self.a_plus * spike_post * trace_pre * dt * (1 - weight)
-        weight -= self.a_minus * spike_pre * trace_post * dt * weight
-        
-        
+        weight += self.a_plus * dt * spike_post[:, np.newaxis] * trace_pre * (1 - weight)
+        weight -= self.a_minus * spike_pre * trace_post[:, np.newaxis] * dt * weight
+
+
 class SynapseLTPf(Synapse):
     def __init__(self, name: str, preNeuron, postNeuron,
                  weight: np.ndarray = None, params = None):
@@ -124,6 +124,30 @@ class SynapseLTPf(Synapse):
         
         trace_pre *= (1 - dt / self.tay_pre)
         trace_pre += self.pre.get_spike()
+        spike_post = self.post.get_spike()
         
-        weight += (self.a_plus * trace_pre * (1 - weight) - 
-                   self.a_forg * weight) * self.post.get_spike() * dt
+        weight += (self.a_plus * trace_pre * spike_post[:, np.newaxis] * (1 - weight) - 
+                   self.a_forg * spike_post[:, np.newaxis] * weight) * dt
+        
+        
+# if __name__ == '__main__':
+#     from neuron import Neuron
+#     params = {
+#         'Ustart': 1,
+#         'Istart': 0,
+#         'Sstart': True
+#     }
+#     pre = Neuron('pre', 3, params)
+#     post = Neuron('post', 4, params)
+    
+#     params_syn_STDP = {'Aplus': 0.01, 'Aminus': 0.01,
+#                        'Tpre': 20, 'Tpost': 20}
+#     w = np.array([
+#         [1, 0, 2],
+#         [0, 0, 1],
+#         [3, -1, 0],
+#         [0, 2, 1]
+#     ], dtype = 'float64')
+#     syn = SynapseSTDP("syn6", pre, post, 
+#                       weight=w, params=params_syn_STDP)
+#     syn.update_weight(1)

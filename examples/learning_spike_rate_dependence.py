@@ -26,13 +26,13 @@ params_neuron_in = {
 params_neuron_out = params_neuron_in
 
 num_neuron_in = 10
-num_neuron_out = 1
+num_neuron_out = 1 # Строго 1
 
 neuron_input =  LIFNeuron('input', num_neuron_in, params_neuron_in)
 neuron_output =  LIFNeuron('output', num_neuron_out, params_neuron_out)
 
 net.add_neurons([neuron_input, neuron_output])
-
+ 
 monitor_S = MonitorSpike('S', [neuron_input, neuron_output])
 net.add_monitors([monitor_S])
 
@@ -67,7 +67,7 @@ plt.show()
 weights_STDP = np.full((num_neuron_out, num_neuron_in), 0.5)
 
 params_syn_STDP = {'Aplus': 0.01, 'Aminus': 0.01,
-              'Tpre': 20, 'Tpost': 20}
+                   'Tpre': 20, 'Tpost': 20}
 syn_STDP = SynapseSTDP('in_out_STDP', neuron_input, neuron_output, 
                   weight=weights_STDP, params=params_syn_STDP)
 

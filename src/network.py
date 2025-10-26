@@ -93,6 +93,7 @@ class Network:
             # Создаем копии внешних токов, чтобы их модифицировать дальше
             I_in[neuron_name] = np.array(I_external.get(neuron_name, np.zeros(neuron.N)))
         
+        print(I_in)
         # Добавляем входы от соединений
         for synapse in self.synapses.values():
             # Получаем выходные токи исходного слоя
@@ -100,6 +101,8 @@ class Network:
             # Прогоняем их через веса соединения
             I_in_post = synapse.propagate(I_out_pre)
             # Складываем с текущими входными токами целевого слоя
+            print(I_in[synapse.post.name])
+            print(I_in_post)
             I_in[synapse.post.name] += I_in_post
     
         # Делаем шаг для каждого слоя с суммарным входом
