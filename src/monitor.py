@@ -141,7 +141,7 @@ class MonitorWeigts(Monitor):
         plt.xlabel('Нейроны исходного слоя')
         plt.ylabel('Нейроны целевого слоя')
         # timespan = (self.counter - len(data), self.counter) if self.max_points else (0, len(data))
-        plt.title(f"Весы соединения {connection_name}\nПоследние {len(data)} шагов (dt={dt})")
+        plt.title(f"Веса соединения {connection_name}\nПоследние {len(data)} шагов (dt={dt})")
         plt.show()
         
     def plot_line(self, connection_name, dt):
@@ -154,5 +154,5 @@ class MonitorWeigts(Monitor):
         plt.xlabel('Времяб (мс)')
         plt.ylabel('Веса')
         plt.legend()
-        plt.title(f"Весы соединения {connection_name}\nПоследние {len(data)} шагов (dt={dt})")
+        plt.title(f"Веса соединения {connection_name}\nПоследние {len(data)} шагов (dt={dt})")
         plt.show()
