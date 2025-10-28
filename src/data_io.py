@@ -7,53 +7,49 @@ class DataImporter:
     def __init__(self, source: str, params: dict):
         self.source = source
         self.params = params.copy()
-        self.time = None
-        self.data = None
 
     def import_data(self):
         raise NotImplementedError
 
-    def preprocess(self, data):
+    def preprocess(self):
         raise NotImplementedError()
 
 
-class DataImporterFromFile(DataImporter):
-    def import_data(self):
-        # Базовый импорт
-        self.data = np.loadtxt(self.source)
-
-
-class EMGStateImporterFromFile(DataImporterFromFile):
-    def __init__(self, name: str, params: dict):
-        super().__init__(name, params)
+class EMGSignalStateImporterFromFile(DataImporter):
+    def __init__(self, sourse: str, params: dict):
+        super().__init__(sourse, params)
+        self.time = None
+        self.signal = None
         self.state = None
-        self.EMG_scaler = params['EMG_scaler']
+        self.dt = None
+        
+        self.signal_scaler = params['signal_scaler']
         self.time_scaler = params['time_scaler']
+        
         self.lowcut = params['lowcut']
         self.highcut = params['highcut']
         
         self.start = params['start']
         self.stop = params['stop']
         self.step = params['step']
-        
-        self.dt = None
+
         
     def import_data(self):
-        data_raw = np.loadtxt(self.source)[self.start:self.stop:self.step]
-        
+        data_raw = np.loadtxt(self.source)[self.start:self.stop:self.step]    
         time = self.time_scaler * data_raw[:, 0]
-        data = self.EMG_scaler * data_raw[:, 1]
+        signal = self.signal_scaler * data_raw[:, 1]
+        
+        self.time = time
+        self.signal =signal
         self.state = data_raw[:, 2]
         self.dt = (time[-1] - time[0]) / (len(time) - 1)
         
-        data = self.preprocess(data)
-        self.time = time
-        self.data = data
-    
-    def preprocess(self, data):
-        data_filtred = bandpass_filter(data, self.lowcut, self.highcut, 1./self.dt)
-        data_abs = abs(data_filtred)
-        return data_abs
+        
+    def preprocess(self):
+        signal = self.signal
+        signal_filtred = bandpass_filter(signal, self.lowcut, self.highcut, 1./self.dt)
+        signal_abs = abs(signal_filtred)
+        self.signal = signal_abs
 
 
 def butter_bandpass(lowcut, highcut, fs, order=4):
