@@ -52,6 +52,10 @@ class EMGSignalStateImporterFromFile(DataImporter):
         self.signal = signal_abs
 
 
+class EMGSignalStateImporterFromCOM(DataImporter):
+    pass
+
+
 def butter_bandpass(lowcut, highcut, fs, order=4):
     """
     Создаёт коэффициенты фильтра полосового пропускания.
